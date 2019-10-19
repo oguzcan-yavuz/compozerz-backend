@@ -47,8 +47,8 @@ const createDirIfNotExists = dir => {
 };
 
 const createDirForComposer = composer => {
-	const dir = path.resolve(__dirname, '..', 'midi');
-	const composerDir = path.resolve(dir, composer.toLowerCase());
+	const dir = path.resolve(__dirname, '..', 'data');
+	const composerDir = path.resolve(dir, composer.toLowerCase(), 'midi');
 	createDirIfNotExists(composerDir);
 
 	return composerDir;
