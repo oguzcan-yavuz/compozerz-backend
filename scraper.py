@@ -1,3 +1,5 @@
+# TODO: convert functions to python syntax
+
 const cheerio = require('cheerio');
 const axios = require('axios');
 const Constants = require('./constants');
