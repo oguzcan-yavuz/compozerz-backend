@@ -1,19 +1,24 @@
 import os
-from flask import Flask
+from flask import Flask, request, jsonify
+from flask_cors import CORS, cross_origin
+from composer import ComposerService
 
 
 app = Flask(__name__)
-app.config.from_object(os.environ['APP_SETTINGS'])
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
+composerService = ComposerService()
 
 
-@app.route('/')
+@app.route("/")
 def hello():
-    return "Hello World!"
+    return jsonify({ "message": "Hello World!" })
 
 
-@app.route('/<name>')
+@app.route("/composer/<name>/generate", methods=["POST"])
 def hello_name(name):
-    return "Hello {}!".format(name)
+    return composerService.generate_melody(name)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run()

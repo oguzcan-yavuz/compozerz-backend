@@ -1,4 +1,3 @@
-import urllib
 from urllib.parse import urljoin
 from urllib.request import urlopen
 import time

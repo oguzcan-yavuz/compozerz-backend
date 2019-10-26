@@ -56,13 +56,12 @@ class ComposerService:
         return next((composer for composer in self.COMPOSERS if composer["name"] == name), None)
 
 
-    def generate_melody(self, name, input_melody):
+    def generate_melody(self, name, input_sequence=twinkle_twinkle):
         composer = self.get_composer_by_name(name)
         bundle = mm.sequence_generator_bundle.read_bundle_file(composer["bundle_path"])
         generator_map = melody_rnn_sequence_generator.get_generator_map()
         melody_rnn = generator_map["basic_rnn"](checkpoint=None, bundle=bundle)
         melody_rnn.initialize()
-        input_sequence = twinkle_twinkle # change this to teapot if you want
         num_steps = 128 # change this for shorter or longer sequences
         temperature = 1.0 # the higher the temperature the more random the sequence.
 

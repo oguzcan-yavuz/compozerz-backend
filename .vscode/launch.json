@@ -13,7 +13,6 @@
                 "FLASK_APP": "app.py",
                 "FLASK_ENV": "development",
                 "FLASK_DEBUG": "0",
-                "APP_SETTINGS": "config.DevelopmentConfig"
             },
             "args": [
                 "run",
