@@ -1,4 +1,5 @@
 import os
+import copy
 import constants as Constants
 import magenta.music as mm
 import magenta
@@ -38,18 +39,19 @@ class ComposerService:
 
 
     def init_composers(self, path):
-        for _, composer_dirs, _ in os.walk(path):
-            for name in composer_dirs:
-                bundle_path = os.path.join(path, name, "basic_rnn.mag")
+        for composer_name in os.listdir(path):
+            if not composer_name.startswith('.'):
+                bundle_path = os.path.join(path, composer_name, "basic_rnn.mag")
                 composer = {
-                    "name": name,
-                    "bundle_path": bundle_path
+                    "name": composer_name,
+                    "bundle_path": bundle_path,
+                    # "picture_url": 
                 }
                 self.COMPOSERS.append(composer)
 
 
     def get_composers(self):
-        return self.COMPOSERS
+        return copy.deepcopy(self.COMPOSERS)
 
 
     def get_composer_by_name(self, name):
