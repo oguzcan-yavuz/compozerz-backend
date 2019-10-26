@@ -1,80 +1,68 @@
-# TODO: convert functions to python syntax
+import urllib
+from urllib.parse import urljoin
+from urllib.request import urlopen
+import time
+import os
+import re
+from bs4 import BeautifulSoup
+import constants as Constants
 
-const cheerio = require('cheerio');
-const axios = require('axios');
-const Constants = require('./constants');
-const fs = require('fs');
-const path = require('path');
 
-const scrapeComposerFromMidiWorld = async (composer) => {
-	const { data } = await axios({
-		baseURL: Constants.MIDIWORLD_URL,
-		url: `/${composer.toLowerCase()}.htm`,
-		method: 'get',
-		responseType: 'document'
-	});
+def scrape_composer_from_midiworld(composer):
+    url = urljoin(Constants.MIDIWORLD_URL, "{0}.{1}".format(composer.lower(), "htm"))
+    response = urlopen(url)
+    html = response.read()
+    return html
 
-	return data;
-};
 
-const isMidExtension = str => /\.mid$/.test(str);
+def is_midi_extension(s):
+    return s.endswith(".mid")
 
-const getAllLinksFromDoc = (doc) => {
-	const $ = cheerio.load(doc);
-	const links = $('a');
-	let parsedLinks = [];
-	$(links).each((i, link) => {
-		parsedLinks.push($(link).attr('href'));
-	});
 
-	return parsedLinks;
-};
+def get_all_links_from_page(page):
+    soup = BeautifulSoup(page, "html.parser")
+    parsed_links = [link["href"] for link in soup.find_all("a")]
+    return parsed_links
 
-const scrapeMidisOfComposer = async (composer) => {
-	console.log(`scraping midi urls of composer: ${composer}`);
-	const doc = await scrapeComposerFromMidiWorld(composer);
-	const links = getAllLinksFromDoc(doc);
-	const midiLinks = links.filter(isMidExtension);
-	console.log(`scraped midi link count for ${composer} is: ${midiLinks.length}`);
 
-	return midiLinks;
-};
+def scrape_midis_of_composer(composer):
+    print("scraping midi urls of composer: {0}".format(composer))
+    page = scrape_composer_from_midiworld(composer)
+    links = get_all_links_from_page(page)
+    midi_links = [link for link in links if is_midi_extension(link)]
+    print("scraped midi link count for {0} is: {1}".format(composer, len(midi_links)))
+    return midi_links
 
-const getMidiNameFromUrl = url => url.split('/').pop();
 
-const createDirIfNotExists = dir => {
-	if (!fs.existsSync(dir)){
-		fs.mkdirSync(dir);
-	}
-};
+def get_midi_name_from_url(url):
+    return url.split("/")[-1]
 
-const createDirForComposer = composer => {
-	const dir = path.resolve(__dirname, '..', 'data');
-	const composerDir = path.resolve(dir, composer.toLowerCase(), 'midi');
-	createDirIfNotExists(composerDir);
 
-	return composerDir;
-};
+def create_dirs(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-const getMidisOfComposer = async (composer) => {
-	const midiUrlsOfComposer = await scrapeMidisOfComposer(composer);
 
-	return Promise.all(midiUrlsOfComposer.map(url => {
-		const midiName = getMidiNameFromUrl(url);
-		const dirPath = createDirForComposer(composer);
-		const midiPath = path.resolve(dirPath, midiName);
-		console.log(`downloading midi: ${midiName}`);
+def create_dirs_for_composer(composer):
+    composer_path = os.path.join(Constants.DATA_PATH, composer.lower(), "midi")
+    create_dirs(composer_path)
+    return composer_path
 
-		return axios({
-			method: "get",
-			url,
-			responseType: "stream"
-		}).then((response) => {
-			response.data.pipe(fs.createWriteStream(midiPath));
-		});
-	}));
-};
 
-(async () => {
-	return await Promise.all(Constants.COMPOSER_NAMES.map(getMidisOfComposer)).then(res => console.log('ALL IS DONE!'))
-})();
+def get_midis_of_composer(composer):
+    midi_urls = scrape_midis_of_composer(composer)
+    for url in midi_urls:
+        midi_name = get_midi_name_from_url(url)
+        composer_path = create_dirs_for_composer(composer)
+        midi_path = os.path.join(composer_path, midi_name)
+        print("downloading midi: {}".format(midi_name))
+        urllib.request.urlretrieve(url, midi_path)
+
+
+def main():
+    for composer in Constants.COMPOSER_NAMES:
+        get_midis_of_composer(composer)
+    print("All is done!")
+
+
+main()

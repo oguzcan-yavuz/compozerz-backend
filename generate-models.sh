@@ -19,19 +19,21 @@ for COMPOSER_PATH in $DATA_PATH;
 
 
         # if [[ "$COMPOSER" > "rac" ]]
+        # then
+        # fi
         echo "Creating the required directories for: $COMPOSER"
-        # mkdir $MELODY_RNN_PATH
-        # mkdir $DATASET_PATH
+        mkdir $MELODY_RNN_PATH
+        mkdir $DATASET_PATH
 
-        # echo "Generating note sequences for: $COMPOSER"
-        # convert_dir_to_note_sequences --input_dir=$MIDI_PATH --output_file=$TFRECORD_PATH --recursive
+        echo "Generating note sequences for: $COMPOSER"
+        convert_dir_to_note_sequences --input_dir=$MIDI_PATH --output_file=$TFRECORD_PATH --recursive
 
-        # echo "Creating dataset for: $COMPOSER"
-        # melody_rnn_create_dataset --config=$CONFIG --input=$TFRECORD_PATH --output_dir=$DATASET_PATH --eval_ratio=$EVAL_RATIO
+        echo "Creating dataset for: $COMPOSER"
+        melody_rnn_create_dataset --config=$CONFIG --input=$TFRECORD_PATH --output_dir=$DATASET_PATH --eval_ratio=$EVAL_RATIO
 
-        # echo "Training and evaluating the model for: $COMPOSER"
-        # melody_rnn_train --config=$CONFIG --run_dir=$RUN_PATH --sequence_example_file=$TRAINING_PATH --hparams=$HPARAMS --num_training_steps=$TRAINING_STEPS &
-        # melody_rnn_train --config=$CONFIG --run_dir=$RUN_PATH --sequence_example_file=$TRAINING_PATH --hparams=$HPARAMS --num_training_steps=$TRAINING_STEPS --eval
+        echo "Training and evaluating the model for: $COMPOSER"
+        melody_rnn_train --config=$CONFIG --run_dir=$RUN_PATH --sequence_example_file=$TRAINING_PATH --hparams=$HPARAMS --num_training_steps=$TRAINING_STEPS &
+        melody_rnn_train --config=$CONFIG --run_dir=$RUN_PATH --sequence_example_file=$TRAINING_PATH --hparams=$HPARAMS --num_training_steps=$TRAINING_STEPS --eval
         melody_rnn_generate --config=$CONFIG --run_dir=$RUN_PATH --hparams=$HPARAMS --bundle_file=$BUNDLE_FILE --save_generator_bundle
     done
 

@@ -2,33 +2,48 @@ import os
 import constants as Constants
 import magenta.music as mm
 import magenta
+from magenta.models.melody_rnn import melody_rnn_sequence_generator
+from magenta.protobuf import generator_pb2
+from magenta.protobuf import music_pb2
+from magenta.music import midi_synth
 import tensorflow
+
+twinkle_twinkle = music_pb2.NoteSequence()
+
+# Add the notes to the sequence.
+twinkle_twinkle.notes.add(pitch=60, start_time=0.0, end_time=0.5, velocity=80)
+twinkle_twinkle.notes.add(pitch=60, start_time=0.5, end_time=1.0, velocity=80)
+twinkle_twinkle.notes.add(pitch=67, start_time=1.0, end_time=1.5, velocity=80)
+twinkle_twinkle.notes.add(pitch=67, start_time=1.5, end_time=2.0, velocity=80)
+twinkle_twinkle.notes.add(pitch=69, start_time=2.0, end_time=2.5, velocity=80)
+twinkle_twinkle.notes.add(pitch=69, start_time=2.5, end_time=3.0, velocity=80)
+twinkle_twinkle.notes.add(pitch=67, start_time=3.0, end_time=4.0, velocity=80)
+twinkle_twinkle.notes.add(pitch=65, start_time=4.0, end_time=4.5, velocity=80)
+twinkle_twinkle.notes.add(pitch=65, start_time=4.5, end_time=5.0, velocity=80)
+twinkle_twinkle.notes.add(pitch=64, start_time=5.0, end_time=5.5, velocity=80)
+twinkle_twinkle.notes.add(pitch=64, start_time=5.5, end_time=6.0, velocity=80)
+twinkle_twinkle.notes.add(pitch=62, start_time=6.0, end_time=6.5, velocity=80)
+twinkle_twinkle.notes.add(pitch=62, start_time=6.5, end_time=7.0, velocity=80)
+twinkle_twinkle.notes.add(pitch=60, start_time=7.0, end_time=8.0, velocity=80) 
+twinkle_twinkle.total_time = 8
+
+twinkle_twinkle.tempos.add(qpm=60);
 
 
 class ComposerService:
     def __init__(self):
-        # COMPOSERS = [{ name: '', midi_path: '', model_path: ''}]
-        # TODO: move generating things we can generate to init and add if exists control
+        # COMPOSERS = [{ name: "", bundle_path: ""}]
         self.COMPOSERS = []
-        self.create_composers(Constants.DATA_PATH)
+        self.init_composers(Constants.DATA_PATH)
 
 
-    def create_composers(self, path):
-        for _, dirs, _ in os.walk(path):
-            for dir in dirs:
-                composer_path = os.path.join(path, dir)
-                midi_path = os.path.join(composer_path, "midi")
-                tfrecord_path = os.path.join(composer_path, "notesequences.tfrecord")
-                melody_rnn_path = os.path.join(composer_path, "melody_rnn")
-                sequence_examples_path = os.path.join(melody_rnn_path, "sequence_examples")
+    def init_composers(self, path):
+        for _, composer_dirs, _ in os.walk(path):
+            for name in composer_dirs:
+                bundle_path = os.path.join(path, name, "basic_rnn.mag")
                 composer = {
-                    "name": dir,
-                    "paths": {
-                        "midi": midi_path,
-                        "tfrecord": tfrecord_path,
-                        "melody_rnn": melody_rnn_path,
-                        "sequence_examples": sequence_examples_path,
-                    },
+                    "name": name,
+                    "bundle_path": bundle_path
                 }
                 self.COMPOSERS.append(composer)
 
@@ -41,41 +56,29 @@ class ComposerService:
         return next((composer for composer in self.COMPOSERS if composer["name"] == name), None)
 
 
-    def create_tfrecord(self, composer):
-        # convert_dir_to_note_sequences \
-        # --input_dir=$INPUT_DIRECTORY \
-        # --output_file=$SEQUENCES_TFRECORD \
-        # --recursive
-        midi_path = composer["paths"]["midi"]
-        tfrecord_path = composer["paths"]["tfrecord"]
-
-        os.system(
-            "convert_dir_to_note_sequences --input_dir={0} --output_file={1} --recursive"
-                .format(midi_path, tfrecord_path)
-        )
-
-
-    def create_sequence_examples(self, composer):
-        # melody_rnn_create_dataset \
-        #     --config=<one of 'basic_rnn', 'mono_rnn', lookback_rnn', or 'attention_rnn'> \
-        #     --input=/tmp/notesequences.tfrecord \
-        #     --output_dir=/tmp/melody_rnn/sequence_examples \
-        #     --eval_ratio=0.10
-        config = Constants.RNN_CONFIG
-        eval_ratio = Constants.EVAL_RATIO
-        tfrecord_path = composer["paths"]["tfrecord"]
-        sequence_examples_path = composer["paths"]["sequence_examples"]
-
-        os.system(
-            "melody_rnn_create_dataset --input_dir={0} --output_file={1} --config={2} --eval_ratio={3}"
-                .format(tfrecord_path, sequence_examples_path, config, eval_ratio)
-        )
-
-
-    def train_composer(self, name):
-        composer = self.get_composer_by_name(name)
-        return composer
-
-
     def generate_melody(self, name, input_melody):
-        pass
+        composer = self.get_composer_by_name(name)
+        bundle = mm.sequence_generator_bundle.read_bundle_file(composer["bundle_path"])
+        generator_map = melody_rnn_sequence_generator.get_generator_map()
+        melody_rnn = generator_map["basic_rnn"](checkpoint=None, bundle=bundle)
+        melody_rnn.initialize()
+        input_sequence = twinkle_twinkle # change this to teapot if you want
+        num_steps = 128 # change this for shorter or longer sequences
+        temperature = 1.0 # the higher the temperature the more random the sequence.
+
+        # Set the start time to begin on the next step after the last note ends.
+        last_end_time = (max(n.end_time for n in input_sequence.notes)
+                        if input_sequence.notes else 0)
+        qpm = input_sequence.tempos[0].qpm 
+        seconds_per_step = 60.0 / qpm / melody_rnn.steps_per_quarter
+        total_seconds = num_steps * seconds_per_step
+
+        generator_options = generator_pb2.GeneratorOptions()
+        generator_options.args["temperature"].float_value = temperature
+        generate_section = generator_options.generate_sections.add(
+        start_time=last_end_time + seconds_per_step,
+        end_time=total_seconds)
+
+        # Ask the model to continue the sequence.
+        sequence = melody_rnn.generate(input_sequence, generator_options)
+        return sequence
