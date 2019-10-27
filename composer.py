@@ -7,6 +7,7 @@ from magenta.models.melody_rnn import melody_rnn_sequence_generator
 from magenta.protobuf import generator_pb2
 from magenta.protobuf import music_pb2
 from magenta.music import midi_synth
+from magenta.music import midi_io
 import tensorflow
 
 twinkle_twinkle = music_pb2.NoteSequence()
@@ -45,7 +46,6 @@ class ComposerService:
                 composer = {
                     "name": composer_name,
                     "bundle_path": bundle_path,
-                    # "picture_url": 
                 }
                 self.COMPOSERS.append(composer)
 
@@ -60,6 +60,8 @@ class ComposerService:
 
     def generate_melody(self, name, input_sequence=twinkle_twinkle):
         composer = self.get_composer_by_name(name)
+        if composer is None:
+            raise Exception('composer not found')
         bundle = mm.sequence_generator_bundle.read_bundle_file(composer["bundle_path"])
         generator_map = melody_rnn_sequence_generator.get_generator_map()
         melody_rnn = generator_map["basic_rnn"](checkpoint=None, bundle=bundle)
@@ -82,4 +84,6 @@ class ComposerService:
 
         # Ask the model to continue the sequence.
         sequence = melody_rnn.generate(input_sequence, generator_options)
-        return sequence
+        midi_path = 'tmp.mid'
+        midi_io.note_sequence_to_midi_file(sequence, midi_path)
+        return midi_path

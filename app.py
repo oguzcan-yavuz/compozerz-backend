@@ -1,6 +1,7 @@
 import os
 import humps
-from flask import Flask, request, jsonify
+import base64
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS, cross_origin
 from composer import ComposerService
 
@@ -10,10 +11,6 @@ cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 composerService = ComposerService()
 
-# humps.camelize('jack_in_the_box')  # jackInTheBox
-# humps.decamelize('rubyTuesdays')  # ruby_tuesdays
-# humps.pascalize('red_robin')  # RedRobin
-
 
 def format_composers(composers):
     return humps.camelize([format_composer(composer, ["bundle_path"]) for composer in composers])
@@ -22,6 +19,7 @@ def format_composers(composers):
 def format_composer(composer, keys_to_delete=None):
     for key in keys_to_delete:
         del composer[key]
+    return composer
 
 
 @app.route("/")
@@ -38,7 +36,12 @@ def get_composers():
 
 @app.route("/composers/<name>/generate", methods=["POST"])
 def generate(name):
-    return composerService.generate_melody(name)
+    composer_name = name.lower()
+    midi_path = composerService.generate_melody(composer_name)
+    with open(midi_path, "rb") as midi:
+        encoded_midi = base64.b64encode(midi.read())
+        print('encoded_midi: {0}'.format(encoded_midi))
+        return encoded_midi
 
 
 if __name__ == "__main__":
