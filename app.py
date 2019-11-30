@@ -22,11 +22,6 @@ def format_composer(composer, keys_to_delete=None):
     return composer
 
 
-@app.route("/")
-def hello():
-    return jsonify({ "message": "Hello World!" })
-
-
 @app.route("/composers/", methods=["GET"])
 def get_composers():
     composers = composerService.get_composers()
