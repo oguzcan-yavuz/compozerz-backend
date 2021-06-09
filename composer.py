@@ -2,10 +2,11 @@ import os
 import copy
 import constants as Constants
 import magenta.music as mm
+from magenta.models.shared import sequence_generator_bundle
 import magenta
 from magenta.models.melody_rnn import melody_rnn_sequence_generator
-from magenta.protobuf import generator_pb2
-from magenta.protobuf import music_pb2
+from magenta.music.protobuf import generator_pb2
+from magenta.music.protobuf import music_pb2
 from magenta.music import midi_synth
 from magenta.music import midi_io
 import tensorflow
@@ -62,7 +63,7 @@ class ComposerService:
         composer = self.get_composer_by_name(name)
         if composer is None:
             raise Exception('composer not found')
-        bundle = mm.sequence_generator_bundle.read_bundle_file(composer["bundle_path"])
+        bundle = sequence_generator_bundle.read_bundle_file(composer["bundle_path"])
         generator_map = melody_rnn_sequence_generator.get_generator_map()
         melody_rnn = generator_map["basic_rnn"](checkpoint=None, bundle=bundle)
         melody_rnn.initialize()
