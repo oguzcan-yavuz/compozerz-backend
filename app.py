@@ -4,6 +4,7 @@ import base64
 from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS, cross_origin
 from composer import ComposerService
+from magenta.music.protobuf import music_pb2
 
 
 app = Flask(__name__)
@@ -32,7 +33,18 @@ def get_composers():
 @app.route("/composers/<name>/generate", methods=["POST"])
 def generate(name):
     composer_name = name.lower()
-    midi_path = composerService.generate_melody(composer_name)
+    print("yvz here:")
+    print(request.json['noteSequence'])
+
+    seq = music_pb2.NoteSequence()
+
+    for note in request.json['noteSequence']['notes']:
+        seq.notes.add(pitch=note['pitch'], start_time=note['startTime'], end_time=note['endTime'], velocity=note['velocity'])
+
+    for tempo in request.json['noteSequence']['tempos']:
+        seq.tempos.add(qpm=tempo['qpm'])
+
+    midi_path = composerService.generate_melody(composer_name, seq)
     return send_file(midi_path, mimetype='audio/midi')
 
 
